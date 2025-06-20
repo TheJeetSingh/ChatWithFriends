@@ -84,80 +84,65 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         createdAt: new Date(data.createdAt)
       };
       
-      // Check if the received message is already in our list (by _id or temp id)
-      const messageExists = prevMessages.some(msg => 
-        msg._id === data._id || 
-        (msg._id.startsWith('temp-') && msg.content === data.content && msg.user.id === data.user.id)
-      );
+      // Check if message already exists by _id
+      const messageExists = prevMessages.some(msg => msg._id === data._id);
       
       if (messageExists) {
-        // Replace the temp message with the real one
-        return prevMessages.map(msg => {
-          if (msg._id.startsWith('temp-') && msg.content === data.content && msg.user.id === data.user.id) {
-            return newMessage;
-          }
-          return msg;
-        });
-      } else {
-        // If it's a new message (from someone else), add it
-        return [...prevMessages, newMessage];
+        return prevMessages;
       }
+      
+      // Replace temp message or add new message
+      return prevMessages.map(msg => {
+        if (msg._id.startsWith('temp-') && 
+            msg.content === data.content && 
+            msg.user.id === data.user.id) {
+          return newMessage;
+        }
+        return msg;
+      }).concat(messageExists ? [] : [newMessage]);
     });
   }, []);
 
   // Subscribe to Pusher channel for real-time updates
   useEffect(() => {
-    // Function to set up Pusher channel
-    const setupPusher = () => {
-      // Clean up existing connections first
-      if (pusherChannel.current) {
-        pusherChannel.current.unbind_all();
-        pusherClient.unsubscribe(pusherChannel.current.name);
-      }
-      
-      // Subscribe to the channel
-      pusherChannel.current = pusherClient.subscribe(channelName);
-      
-      // Bind to new message events
-      pusherChannel.current.bind('new-message', handleNewMessage);
-      
-      // Bind to subscription succeeded to confirm we're connected
-      pusherChannel.current.bind('pusher:subscription_succeeded', () => {
-        console.log(`Successfully subscribed to ${channelName} channel`);
-      });
-    };
+    if (!channelName) return;
 
-    // Set up Pusher connection
-    setupPusher();
+    console.log(`Subscribing to channel: ${channelName}`);
+    
+    // Subscribe to the channel
+    const channel = pusherClient.subscribe(channelName);
+    pusherChannel.current = channel;
 
-    // Add heartbeat check to maintain connection and verify it's still active
-    const heartbeatInterval = setInterval(() => {
-      if (!pusherClient.connection.state || pusherClient.connection.state !== 'connected') {
-        console.log('Pusher connection lost, reconnecting...');
-        setupPusher();
-      }
-    }, 30000); // Check every 30 seconds
+    // Bind to events
+    channel.bind('new-message', handleNewMessage);
+    
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log(`Successfully subscribed to ${channelName}`);
+    });
 
-    // Clean up subscription when component unmounts
+    channel.bind('pusher:subscription_error', (error: any) => {
+      console.error(`Error subscribing to ${channelName}:`, error);
+    });
+
+    // Clean up subscription when component unmounts or channel changes
     return () => {
-      clearInterval(heartbeatInterval);
-      if (pusherChannel.current) {
-        pusherChannel.current.unbind_all();
-        pusherClient.unsubscribe(channelName);
-      }
+      console.log(`Unsubscribing from channel: ${channelName}`);
+      channel.unbind_all();
+      pusherClient.unsubscribe(channelName);
     };
-  }, [handleNewMessage, channelName]);
+  }, [channelName, handleNewMessage]);
 
   const handleSendMessage = async (content: string) => {
-    if (!currentUser) return;
+    if (!currentUser || !content.trim()) return;
     
+    const tempId = `temp-${Date.now()}`;
     setIsLoading(true);
     
     try {
-      // Create a temporary message to show immediately
+      // Create a temporary message
       const tempMessage: Message = {
-        _id: `temp-${Date.now()}`,
-        content,
+        _id: tempId,
+        content: content.trim(),
         createdAt: new Date(),
         userId: currentUser.id,
         user: {
@@ -166,13 +151,13 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         }
       };
       
-      // Add the temporary message to the UI immediately
+      // Add temp message to UI
       setMessages(prev => [...prev, tempMessage]);
       
-      // Send the message to the server
+      // Send to server
       const endpoint = chatId && chatType 
-        ? `/api/messages/${chatType}/${chatId}`  // Specific chat
-        : '/api/messages';                       // Global chat fallback
+        ? `/api/messages/${chatType}/${chatId}`
+        : '/api/messages';
         
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -180,21 +165,19 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          content,
-        }),
+        body: JSON.stringify({ content: content.trim() }),
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to send message: ${response.status}`);
+        throw new Error(`Server returned ${response.status}`);
       }
+
+      // Server will broadcast via Pusher, which will update UI
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Remove the temporary message if sending failed
-      setMessages(prev => prev.filter(msg => !msg._id.startsWith('temp-')));
-      
-      // Fetch messages again to ensure we're in sync
-      fetchMessages();
+      // Remove temp message on error
+      setMessages(prev => prev.filter(msg => msg._id !== tempId));
+      alert('Failed to send message. Please try again.');
     } finally {
       setIsLoading(false);
     }

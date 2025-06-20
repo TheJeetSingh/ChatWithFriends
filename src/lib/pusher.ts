@@ -1,8 +1,7 @@
 import PusherServer from 'pusher';
 import PusherClient from 'pusher-js';
 
-// Enable Pusher logging for debugging
-// Comment this out in production
+// Enable Pusher logging in development
 PusherClient.logToConsole = process.env.NODE_ENV === 'development';
 
 // Server-side Pusher instance
@@ -19,30 +18,16 @@ const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
 const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
 if (!pusherKey || !pusherCluster) {
-  console.error('Missing Pusher configuration:', { 
-    key: pusherKey ? 'OK' : 'MISSING',
-    cluster: pusherCluster ? 'OK' : 'MISSING'
-  });
+  throw new Error('Missing required Pusher configuration');
 }
 
-export const pusherClient = new PusherClient(
-  pusherKey || '',
-  {
-    cluster: pusherCluster || 'ap2',
-    forceTLS: true,
-    enabledTransports: ['ws', 'wss'],
-    wsHost: `ws-${pusherCluster || 'ap2'}.pusher.com`,
-    httpHost: `sockjs-${pusherCluster || 'ap2'}.pusher.com`,
-    disableStats: true,
-    authEndpoint: '/api/pusher/auth',
-  }
-);
+export const pusherClient = new PusherClient(pusherKey, {
+  cluster: pusherCluster,
+  forceTLS: true,
+});
 
+// Debug logging in development
 if (process.env.NODE_ENV === 'development') {
-  // Debug initialization
-  console.log('Pusher initialized with cluster:', pusherCluster);
-
-  // Handle connection events
   pusherClient.connection.bind('connected', () => {
     console.log('Pusher connected successfully');
   });
@@ -52,7 +37,7 @@ if (process.env.NODE_ENV === 'development') {
   });
 
   pusherClient.connection.bind('error', (err: any) => {
-    console.error('Error connecting to Pusher:', err);
+    console.error('Pusher connection error:', err);
   });
 }
 
