@@ -3,6 +3,7 @@ import { pusherClient } from '@/lib/pusher';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import NavBar from './NavBar';
+import { Channel } from 'pusher-js';
 
 type ChatType = 'direct' | 'group';
 
@@ -28,7 +29,7 @@ type ChatContainerProps = {
 export default function ChatContainer({ currentUser, chatId, chatType }: ChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const pusherChannel = useRef<any>(null);
+  const pusherChannel = useRef<Channel | null>(null);
   
   // Channel name will be different based on chat type and ID
   const channelName = chatId && chatType ? `${chatType}-${chatId}` : 'chat';
@@ -43,7 +44,7 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         });
         const data = await response.json();
         
-        const formattedMessages = data.map((msg: any) => ({
+        const formattedMessages = data.map((msg: Message) => ({
           ...msg,
           createdAt: new Date(msg.createdAt)
         }));
@@ -56,7 +57,7 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         });
         const data = await response.json();
         
-        const formattedMessages = data.map((msg: any) => ({
+        const formattedMessages = data.map((msg: Message) => ({
           ...msg,
           createdAt: new Date(msg.createdAt)
         }));
@@ -74,7 +75,7 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
   }, [fetchMessages, chatId, chatType]);
 
   // Handle new message from Pusher
-  const handleNewMessage = useCallback((data: any) => {
+  const handleNewMessage = useCallback((data: Message) => {
     console.log('Received message via Pusher:', data);
     
     setMessages((prevMessages) => {
@@ -120,7 +121,7 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
       console.log(`Successfully subscribed to ${channelName}`);
     });
 
-    channel.bind('pusher:subscription_error', (error: any) => {
+    channel.bind('pusher:subscription_error', (error: Error) => {
       console.error(`Error subscribing to ${channelName}:`, error);
     });
 

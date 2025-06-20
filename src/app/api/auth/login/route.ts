@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateUser } from '@/lib/mongodb';
-import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 
 // Get JWT Secret from environment variable with fallback for development

@@ -53,9 +53,9 @@ export default function ChatPage() {
         
         const data = await response.json();
         setChatDetails(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching chat details:', err);
-        setError(err.message || 'Failed to load chat details');
+        setError(err instanceof Error ? err.message : 'Failed to load chat details');
       } finally {
         setIsLoadingChat(false);
       }
@@ -88,7 +88,7 @@ export default function ChatPage() {
   if (!user || !chatDetails) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="mb-4">Chat not found or you don't have access.</p>
+        <p className="mb-4">Chat not found or you don&apos;t have access.</p>
         <Link href="/dashboard" className="text-blue-600 hover:underline">
           Return to Dashboard
         </Link>

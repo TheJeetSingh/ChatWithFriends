@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserDirectChats, findOrCreateDirectChat, findUserById } from '@/lib/mongodb';
-import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 
@@ -20,7 +19,7 @@ async function getCurrentUser(request: NextRequest) {
     const decoded = jwt.verify(token, SECRET) as { id: string; email: string };
     const user = await findUserById(new ObjectId(decoded.id));
     return user;
-  } catch (err) {
+  } catch (_) {
     return null;
   }
 }

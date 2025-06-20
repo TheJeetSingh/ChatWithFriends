@@ -26,6 +26,19 @@ export const pusherClient = new PusherClient(pusherKey, {
   forceTLS: true,
 });
 
+interface PusherError {
+  error?: {
+    type: string;
+    data?: unknown;
+  };
+  message?: string;
+}
+
+interface PusherSubscriptionData {
+  channel?: string;
+  [key: string]: unknown;
+}
+
 // Debug logging in development
 if (process.env.NODE_ENV === 'development') {
   pusherClient.connection.bind('connected', () => {
@@ -36,13 +49,13 @@ if (process.env.NODE_ENV === 'development') {
     console.log('Pusher disconnected');
   });
 
-  pusherClient.connection.bind('error', (err: any) => {
+  pusherClient.connection.bind('error', (err: PusherError) => {
     console.error('Pusher connection error:', err);
   });
 }
 
 // Make sure the connection is robust by setting up auto-reconnection
-pusherClient.connection.bind('error', (err: any) => {
+pusherClient.connection.bind('error', (err: PusherError) => {
   if (err.error?.type === 'WebSocketError') {
     console.log('Reconnecting to Pusher after WebSocket error');
     setTimeout(() => {
@@ -52,7 +65,7 @@ pusherClient.connection.bind('error', (err: any) => {
 });
 
 // Make sure every subscription has the member_added event
-pusherClient.global_emitter.bind('pusher:subscription_succeeded', (data: any) => {
+pusherClient.global_emitter.bind('pusher:subscription_succeeded', (data: PusherSubscriptionData) => {
   if (data?.channel) {
     console.log(`Successfully subscribed to ${data.channel}`);
   }

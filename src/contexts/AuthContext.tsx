@@ -28,17 +28,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Function to set a cookie
-const setCookie = (name: string, value: string, days = 7) => {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Strict`;
-};
-
-// Function to remove a cookie
-const removeCookie = (name: string) => {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict`;
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,9 +99,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(data.user);
       router.push('/dashboard');
       return Promise.resolve();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err.message || 'An error occurred during login');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
+      setError(errorMessage);
       return Promise.reject(err);
     } finally {
       setIsLoading(false);
@@ -140,8 +130,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(data.user);
       router.push('/dashboard');
       return Promise.resolve();
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during registration');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during registration';
+      setError(errorMessage);
       return Promise.reject(err);
     } finally {
       setIsLoading(false);

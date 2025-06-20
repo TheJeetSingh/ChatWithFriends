@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pusherServer } from '@/lib/pusher';
-import { ObjectId } from 'mongodb';
 import { findDocuments, insertDocument } from '@/lib/mongodb';
+import { Document } from 'mongodb';
+
+type Message = {
+  _id: string;
+  content: string;
+  createdAt: Date;
+  userId?: string;
+  user: {
+    id: string;
+    name: string;
+  };
+};
 
 export async function GET() {
   try {
@@ -12,10 +23,12 @@ export async function GET() {
     });
     
     // Transform MongoDB ObjectId to string for JSON serialization
-    const formattedMessages = messages.map((msg: any) => ({
-      ...msg,
+    const formattedMessages = messages.map((msg: Document) => ({
       _id: msg._id.toString(),
+      content: msg.content as string,
+      createdAt: msg.createdAt as Date,
       userId: msg.userId?.toString(),
+      user: msg.user as Message['user']
     }));
     
     return NextResponse.json(formattedMessages);

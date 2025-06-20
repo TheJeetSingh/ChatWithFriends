@@ -21,8 +21,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push(redirect);
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to log in');
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Failed to log in');
     }
   };
 

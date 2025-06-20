@@ -1,4 +1,4 @@
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient, ObjectId, Document, Filter, UpdateFilter } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
 // Use the connection string from environment variable
@@ -15,7 +15,7 @@ let clientPromise: Promise<MongoClient>;
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof global & {
+  const globalWithMongo = global as typeof global & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
 
@@ -305,17 +305,17 @@ export async function findOneDocument(collectionName: string, query = {}) {
   return collection.findOne(query);
 }
 
-export async function insertDocument(collectionName: string, document: any) {
+export async function insertDocument(collectionName: string, document: Document) {
   const collection = await getCollection(collectionName);
-  return collection.insertOne(document);
+  return await collection.insertOne(document);
 }
 
-export async function updateDocument(collectionName: string, filter: any, update: any) {
+export async function updateDocument(collectionName: string, filter: Filter<Document>, update: UpdateFilter<Document>) {
   const collection = await getCollection(collectionName);
-  return collection.updateOne(filter, { $set: update });
+  return await collection.updateOne(filter, update);
 }
 
-export async function deleteDocument(collectionName: string, filter: any) {
+export async function deleteDocument(collectionName: string, filter: Filter<Document>) {
   const collection = await getCollection(collectionName);
-  return collection.deleteOne(filter);
+  return await collection.deleteOne(filter);
 } 

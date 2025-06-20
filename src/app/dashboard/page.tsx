@@ -13,13 +13,19 @@ type Chat = {
   lastMessageTime?: Date;
 };
 
+type SearchUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [searchEmail, setSearchEmail] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
