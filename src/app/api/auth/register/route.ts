@@ -57,11 +57,6 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Get the request host
-    const host = process.env.VERCEL_URL 
-      ? `.${process.env.VERCEL_URL.split(':')[0]}`  // Extract domain without port
-      : undefined;     // For local development
-    
     // Cookie settings based on environment
     const isProduction = process.env.NODE_ENV === 'production';
     
@@ -73,7 +68,7 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
-      domain: isProduction ? host : undefined,
+      // leave domain undefined → host-only cookie works for localhost and Vercel URLs
     });
     
     return response;
