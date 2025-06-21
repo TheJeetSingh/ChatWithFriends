@@ -16,31 +16,40 @@ export async function GET(request: NextRequest) {
     const token = request.cookies.get('auth_token')?.value;
     
     if (!token) {
+      console.log('No auth token found in cookies');
       return NextResponse.json({ user: null });
     }
     
     // Verify token
     try {
       const decoded = jwt.verify(token, SECRET) as { id: string; email: string };
+      console.log('Decoded token:', decoded);
+      
+      if (!ObjectId.isValid(decoded.id)) {
+        console.error('Invalid ObjectId in token:', decoded.id);
+        return NextResponse.json({ user: null });
+      }
       
       // Get user from database
       const user = await findUserById(new ObjectId(decoded.id));
       
       if (!user) {
+        console.log('No user found for ID:', decoded.id);
         return NextResponse.json({ user: null });
       }
       
       // Return user data (without sensitive fields)
       return NextResponse.json({
         user: {
-          id: user._id,
+          id: user._id.toString(), // Convert ObjectId to string
           email: user.email,
           name: user.name,
         },
       });
       
-    } catch {
+    } catch (error) {
       // Invalid token
+      console.error('Token verification failed:', error);
       return NextResponse.json({ user: null });
     }
     
