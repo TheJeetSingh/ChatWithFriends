@@ -40,14 +40,33 @@ export default function DashboardPage() {
 
   const fetchChats = async () => {
     try {
-      // Verify session is still valid
-      const sessionRes = await fetch('/api/auth/session', {
-        credentials: 'include'
-      });
-      const sessionData = await sessionRes.json();
+      // Verify session is still valid with retries
+      let retries = 3;
+      let sessionVerified = false;
+      let sessionData;
       
-      if (!sessionRes.ok || !sessionData.user) {
-        // Session is invalid, redirect to login
+      while (retries > 0 && !sessionVerified) {
+        try {
+          const sessionRes = await fetch('/api/auth/session', {
+            credentials: 'include'
+          });
+          sessionData = await sessionRes.json();
+          
+          if (sessionRes.ok && sessionData.user) {
+            sessionVerified = true;
+            break;
+          }
+          
+          // Wait between retries with increasing delay
+          await new Promise(resolve => setTimeout(resolve, (4 - retries) * 200));
+        } catch (err) {
+          console.warn('Session verification attempt failed:', err);
+        }
+        retries--;
+      }
+      
+      if (!sessionVerified) {
+        console.log('Session verification failed, redirecting to login');
         router.push('/login');
         return;
       }

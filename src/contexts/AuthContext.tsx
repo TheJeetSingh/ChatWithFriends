@@ -99,17 +99,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Set user in state
       setUser(data.user);
       
-      // Wait a moment for the cookie to be set
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Verify session with retries
+      let retries = 3;
+      let sessionVerified = false;
       
-      // Verify the session is active
-      const sessionResponse = await fetch('/api/auth/session', {
-        credentials: 'include'
-      });
+      while (retries > 0 && !sessionVerified) {
+        try {
+          // Wait between retries with increasing delay
+          await new Promise(resolve => setTimeout(resolve, (4 - retries) * 200));
+          
+          const sessionResponse = await fetch('/api/auth/session', {
+            credentials: 'include'
+          });
+          
+          const sessionData = await sessionResponse.json();
+          if (sessionResponse.ok && sessionData.user) {
+            sessionVerified = true;
+            break;
+          }
+        } catch (err) {
+          console.warn('Session verification attempt failed:', err);
+        }
+        retries--;
+      }
       
-      const sessionData = await sessionResponse.json();
-      if (!sessionResponse.ok || !sessionData.user) {
-        throw new Error('Failed to verify session');
+      if (!sessionVerified) {
+        throw new Error('Failed to verify session after multiple attempts');
       }
       
       // Now safe to redirect
