@@ -24,6 +24,11 @@ export default function ChatPage() {
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
   const [isLoadingChat, setIsLoadingChat] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteResults, setInviteResults] = useState<ChatDetails[]>([]);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   // Extract chat type and ID from URL params
   const chatType = params.type as ChatType;
@@ -68,6 +73,47 @@ export default function ChatPage() {
 
     fetchChatDetails();
   }, [user, isLoading, chatId, chatType, router]);
+
+  // Function to search users by email (reuse API)
+  const searchUsers = async () => {
+    if (!inviteEmail.trim()) return;
+    setIsInviting(true);
+    try {
+      const res = await fetch(`/api/users/search?email=${encodeURIComponent(inviteEmail.trim())}`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      setInviteResults(data);
+    } catch (e) {
+      console.error('Search error', e);
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  // Function to add member
+  const addMember = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/chats/groups/${chatId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ addMembers: [userId] })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to add member');
+      }
+      // Success – refresh chat details
+      setIsAdding(false);
+      setInviteEmail('');
+      setInviteResults([]);
+      // Optionally refetch chat details to update memberCount
+      setChatDetails(prev => prev ? { ...prev, memberCount: (prev.memberCount || 0) + 1 } : prev);
+    } catch (e) {
+      setInviteError(e instanceof Error ? e.message : 'Failed');
+    }
+  };
 
   if (isLoading || isLoadingChat) {
     return (
@@ -121,8 +167,55 @@ export default function ChatPage() {
           <div className="text-sm text-gray-500">
             {chatDetails.type === 'direct' ? 'Direct Message' : 'Group Chat'}
           </div>
+          {chatDetails.type === 'group' && (
+            <button
+              onClick={() => setIsAdding(prev => !prev)}
+              className="ml-4 text-sm text-blue-600 hover:text-blue-800"
+            >
+              {isAdding ? 'Close' : 'Add Members'}
+            </button>
+          )}
         </div>
       </header>
+
+      {isAdding && (
+        <div className="bg-gray-50 border-t border-b py-4 px-4">
+          <div className="max-w-md mx-auto">
+            <div className="flex gap-2 mb-2">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="User email"
+                className="flex-1 px-3 py-2 border rounded-md"
+              />
+              <button
+                onClick={searchUsers}
+                disabled={isInviting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md"
+              >
+                {isInviting ? 'Searching' : 'Search'}
+              </button>
+            </div>
+            {inviteError && <p className="text-red-600 text-sm mb-2">{inviteError}</p>}
+            {inviteResults.length > 0 && (
+              <div className="border rounded divide-y max-h-60 overflow-y-auto">
+                {inviteResults.map(u => (
+                  <div key={u.id} className="p-2 flex justify-between items-center">
+                    <span>{u.name}</span>
+                    <button
+                      onClick={() => addMember(u.id)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <ChatContainer 
         currentUser={{
