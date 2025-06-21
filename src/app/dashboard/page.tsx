@@ -40,11 +40,28 @@ export default function DashboardPage() {
 
   const fetchChats = async () => {
     try {
+      // Verify session is still valid
+      const sessionRes = await fetch('/api/auth/session', {
+        credentials: 'include'
+      });
+      const sessionData = await sessionRes.json();
+      
+      if (!sessionRes.ok || !sessionData.user) {
+        // Session is invalid, redirect to login
+        router.push('/login');
+        return;
+      }
+
       // Fetch direct chats
       const directRes = await fetch('/api/chats/direct', {
         credentials: 'include',
       });
       if (!directRes.ok) {
+        if (directRes.status === 401) {
+          // Unauthorized - redirect to login
+          router.push('/login');
+          return;
+        }
         throw new Error(`Failed to fetch direct chats: ${directRes.statusText}`);
       }
       const directChats = await directRes.json();
@@ -54,6 +71,11 @@ export default function DashboardPage() {
         credentials: 'include',
       });
       if (!groupRes.ok) {
+        if (groupRes.status === 401) {
+          // Unauthorized - redirect to login
+          router.push('/login');
+          return;
+        }
         throw new Error(`Failed to fetch group chats: ${groupRes.statusText}`);
       }
       const groupChats = await groupRes.json();

@@ -96,7 +96,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('No user data received');
       }
       
+      // Set user in state
       setUser(data.user);
+      
+      // Wait a moment for the cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verify the session is active
+      const sessionResponse = await fetch('/api/auth/session', {
+        credentials: 'include'
+      });
+      
+      const sessionData = await sessionResponse.json();
+      if (!sessionResponse.ok || !sessionData.user) {
+        throw new Error('Failed to verify session');
+      }
+      
+      // Now safe to redirect
       router.push('/dashboard');
       return Promise.resolve();
     } catch (err: unknown) {
