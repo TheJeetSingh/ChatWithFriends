@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -37,15 +38,15 @@ async function verifyGroupMembership(groupId: string, userId: ObjectId) {
 // GET messages for a group chat
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const groupId = params.id;
+    const groupId = context?.params?.id;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
@@ -76,15 +77,15 @@ export async function GET(
 // POST a message to a group chat
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const groupId = params.id;
+    const groupId = context?.params?.id;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
