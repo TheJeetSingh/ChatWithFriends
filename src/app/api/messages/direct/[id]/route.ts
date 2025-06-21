@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMessagesWithUserDetails, createMessage, findUserById, findOrCreateDirectChat } from '@/lib/mongodb';
+import { getMessagesWithUserDetails, createMessage, findUserById } from '@/lib/mongodb';
 import { pusherServer } from '@/lib/pusher';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
