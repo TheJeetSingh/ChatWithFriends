@@ -19,7 +19,7 @@ async function getCurrentUser(request: NextRequest) {
     const decoded = jwt.verify(token, SECRET) as { id: string; email: string };
     const user = await findUserById(new ObjectId(decoded.id));
     return user;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

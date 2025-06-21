@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         },
       });
       
-    } catch (_) {
+    } catch {
       // Invalid token
       return NextResponse.json({ user: null });
     }
