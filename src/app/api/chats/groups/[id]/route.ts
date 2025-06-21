@@ -44,15 +44,15 @@ async function getCurrentUser(request: NextRequest) {
 // GET - Get details of a specific group chat
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const { id: groupId } = context.params;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
@@ -101,15 +101,15 @@ export async function GET(
 // PATCH - Update group chat (e.g., add/remove members, change name)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: { params: { id: string } }
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const { id: groupId } = context.params;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
