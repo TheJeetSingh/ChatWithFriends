@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
       { expiresIn: '7d' }
     );
     
+    console.log('[login] Created token for user:', user._id.toString());
+    console.log('[login] Token preview:', token.substring(0, 10) + '...');
+    
     // Set cookie
     const response = NextResponse.json({
       user: {
@@ -49,6 +52,8 @@ export async function POST(request: NextRequest) {
     
     // Cookie settings based on environment
     const isProduction = process.env.NODE_ENV === 'production';
+    console.log('[login] Environment:', process.env.NODE_ENV);
+    console.log('[login] Is production:', isProduction);
     
     response.cookies.set({
       name: 'auth_token',
@@ -58,7 +63,14 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
-      // leave domain undefined → host-only cookie works for localhost and Vercel URLs
+    });
+    
+    console.log('[login] Set auth_token cookie with options:', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
     });
     
     return response;

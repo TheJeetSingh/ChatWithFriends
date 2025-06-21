@@ -65,14 +65,22 @@ export function middleware(request: NextRequest) {
     }
     
     try {
+      console.log('[middleware] Attempting to verify token:', token.substring(0, 10) + '...');
+      console.log('[middleware] Using secret:', SECRET.substring(0, 5) + '...');
+      
       // Verify token
-      jwt.verify(token, SECRET);
-      console.log('[middleware] Valid token for API route');
+      const decoded = jwt.verify(token, SECRET);
+      console.log('[middleware] Token successfully verified. Decoded payload:', decoded);
+      
       return NextResponse.next();
     } catch (err) {
-      console.log('[middleware] Invalid token for API route:', err);
+      const error = err as Error;
+      console.log('[middleware] Invalid token for API route. Error:', error.message);
+      console.log('[middleware] Error name:', error.name);
+      console.log('[middleware] Full error:', error);
+      
       return new NextResponse(
-        JSON.stringify({ error: 'Invalid token' }),
+        JSON.stringify({ error: 'Invalid token', details: error.message }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
