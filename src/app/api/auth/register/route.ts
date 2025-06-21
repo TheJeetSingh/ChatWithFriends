@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     
     // Add auth token cookie with domain settings
     const domain = process.env.VERCEL_URL 
-      ? '.vercel.app'  // For production on Vercel
+      ? process.env.VERCEL_URL  // Use the full Vercel URL for production
       : undefined;     // For local development
     
     response.cookies.set({
