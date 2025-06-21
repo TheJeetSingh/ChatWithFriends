@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 // JWT Secret from environment variable
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -10,6 +10,9 @@ if (!JWT_SECRET) {
 
 // Fallback secret for development only - should be configured properly in production
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
+
+// Create a TextEncoder for the secret
+const secretKey = new TextEncoder().encode(SECRET);
 
 // List of public routes that don't require authentication
 const publicRoutes = [
@@ -22,7 +25,7 @@ const publicRoutes = [
   '/api/auth/logout'
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Check if the requested path is public
   const path = request.nextUrl.pathname;
   
@@ -42,7 +45,7 @@ export function middleware(request: NextRequest) {
     if (token) {
       try {
         // Verify token
-        jwt.verify(token, SECRET);
+        await jose.jwtVerify(token, secretKey);
         console.log('[middleware] Valid token found, redirecting to dashboard');
         return NextResponse.redirect(new URL('/dashboard', request.url));
       } catch (err) {
@@ -66,12 +69,10 @@ export function middleware(request: NextRequest) {
     
     try {
       console.log('[middleware] Attempting to verify token:', token.substring(0, 10) + '...');
-      console.log('[middleware] Using secret:', SECRET.substring(0, 5) + '...');
       
       // Verify token
-      const decoded = jwt.verify(token, SECRET);
-      console.log('[middleware] Token successfully verified. Decoded payload:', decoded);
-      
+      await jose.jwtVerify(token, secretKey);
+      console.log('[middleware] Token successfully verified');
       return NextResponse.next();
     } catch (err) {
       const error = err as Error;
