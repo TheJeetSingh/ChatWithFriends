@@ -46,9 +46,13 @@ async function getCurrentUser(request: NextRequest) {
 
 // GET - List all group chats for the current user
 export async function GET(request: NextRequest) {
+  console.log('[groups] GET request received');
   try {
     const currentUser = await getCurrentUser(request);
+    console.log('[groups] Current user:', currentUser ? currentUser._id.toString() : 'null');
+    
     if (!currentUser) {
+      console.log('[groups] Unauthorized - no current user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -56,9 +60,12 @@ export async function GET(request: NextRequest) {
     const db = client.db();
     
     // Find all groups where the user is a member
+    console.log('[groups] Finding groups for user:', currentUser._id.toString());
     const groups = await db.collection('groupChats').find({
       members: currentUser._id
     }).toArray();
+    
+    console.log('[groups] Found groups:', groups.length);
     
     // Transform for response
     const transformedGroups = groups.map(group => ({
@@ -70,6 +77,7 @@ export async function GET(request: NextRequest) {
       lastMessageTime: group.lastMessageTime
     }));
 
+    console.log('[groups] Returning transformed groups');
     return NextResponse.json(transformedGroups);
   } catch (error) {
     console.error('Error fetching group chats:', error);
