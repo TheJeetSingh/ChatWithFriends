@@ -41,10 +41,16 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
+type RouteParams = {
+  params: {
+    id: string;
+  };
+};
+
 // GET - Get details of a specific group chat
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
@@ -52,7 +58,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = context.params;
+    const { id: groupId } = params;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
@@ -101,7 +107,7 @@ export async function GET(
 // PATCH - Update group chat (e.g., add/remove members, change name)
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
@@ -109,7 +115,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = context.params;
+    const { id: groupId } = params;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
@@ -166,7 +172,7 @@ export async function PATCH(
       if (memberIdsToRemove.length > 0) {
         await db.collection('groupChats').updateOne(
           { _id: new ObjectId(groupId) },
-          { $pull: { members: memberIdsToRemove } }
+          { $pull: { members: { $in: memberIdsToRemove } } } as any
         );
       }
     }
