@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -41,16 +42,10 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
-};
-
 // GET - Get details of a specific group chat
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  context: any
 ): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
@@ -58,7 +53,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const groupId = context?.params?.id;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
@@ -107,7 +102,7 @@ export async function GET(
 // PATCH - Update group chat (e.g., add/remove members, change name)
 export async function PATCH(
   request: NextRequest,
-  { params }: RouteParams
+  context: any
 ): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
@@ -115,7 +110,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const groupId = context?.params?.id;
     if (!ObjectId.isValid(groupId)) {
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
