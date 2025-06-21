@@ -82,8 +82,20 @@ export async function getCollection(collectionName: string) {
 export async function findUserById(userId: string | ObjectId) {
   try {
     const collection = await getCollection('users');
+    
+    // Validate ObjectId
+    if (!ObjectId.isValid(userId)) {
+      console.error('Invalid ObjectId format:', userId);
+      return null;
+    }
+    
+    // Convert to ObjectId if string
     const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
+    
     const user = await collection.findOne({ _id: objectId });
+    if (!user) {
+      console.log('No user found for ID:', userId);
+    }
     return user;
   } catch (error) {
     console.error('Error finding user by ID:', error);

@@ -13,13 +13,30 @@ const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 // Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
-  if (!token) return null;
+  if (!token) {
+    console.log('No auth token found in cookies');
+    return null;
+  }
 
   try {
     const decoded = jwt.verify(token, SECRET) as { id: string; email: string };
+    console.log('Decoded token:', decoded);
+    
+    // Ensure the id is a valid ObjectId
+    if (!ObjectId.isValid(decoded.id)) {
+      console.error('Invalid ObjectId in token:', decoded.id);
+      return null;
+    }
+    
     const user = await findUserById(new ObjectId(decoded.id));
+    if (!user) {
+      console.log('User not found for id:', decoded.id);
+      return null;
+    }
+    
     return user;
-  } catch {
+  } catch (error) {
+    console.error('Error verifying token:', error);
     return null;
   }
 }
