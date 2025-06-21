@@ -43,7 +43,12 @@ export default function ChatPage() {
       setError(null);
       
       try {
-        const response = await fetch(`/api/chats/${chatType}/${chatId}`, {
+        // Use plural form for group chats
+        const endpoint = chatType === 'group' 
+          ? `/api/chats/groups/${chatId}`
+          : `/api/chats/${chatType}/${chatId}`;
+
+        const response = await fetch(endpoint, {
           credentials: 'include'
         });
         
