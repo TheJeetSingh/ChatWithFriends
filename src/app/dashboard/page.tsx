@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,15 +30,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!user && !isLoading) {
-      router.push('/login');
-    } else if (user) {
-      fetchChats();
-    }
-  }, [user, isLoading, router]);
-
-  const fetchChats = async () => {
+  const fetchChats = useCallback(async () => {
     try {
       // Verify session is still valid with retries
       let retries = 3;
@@ -112,7 +104,15 @@ export default function DashboardPage() {
       console.error('Failed to fetch chats:', error);
       setError('Failed to load chats. Please try again.');
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    if (!user && !isLoading) {
+      router.push('/login');
+    } else if (user) {
+      fetchChats();
+    }
+  }, [user, isLoading, router, fetchChats]);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();

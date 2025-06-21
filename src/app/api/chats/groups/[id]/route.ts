@@ -71,7 +71,6 @@ export async function GET(
     }
 
     // Get member details
-    const memberIds = group.members.map((id: ObjectId) => id.toString());
     const members = await db.collection('users')
       .find({ _id: { $in: group.members } })
       .project({ name: 1, email: 1 })
@@ -133,7 +132,12 @@ export async function PATCH(
       );
     }
 
-    const updates: any = {
+    interface GroupUpdates {
+      updatedAt: Date;
+      name?: string;
+    }
+
+    const updates: GroupUpdates = {
       updatedAt: new Date()
     };
 
@@ -162,7 +166,7 @@ export async function PATCH(
       if (memberIdsToRemove.length > 0) {
         await db.collection('groupChats').updateOne(
           { _id: new ObjectId(groupId) },
-          { $pull: { members: { $in: memberIdsToRemove } } } as any
+          { $pull: { members: memberIdsToRemove } }
         );
       }
     }
