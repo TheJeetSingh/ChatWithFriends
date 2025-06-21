@@ -47,15 +47,20 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Add auth token cookie
+    // Add auth token cookie with domain settings
+    const domain = process.env.VERCEL_URL 
+      ? '.vercel.app'  // For production on Vercel
+      : undefined;     // For local development
+    
     response.cookies.set({
       name: 'auth_token',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: '/',
+      domain: domain,
     });
     
     return response;
