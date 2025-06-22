@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {

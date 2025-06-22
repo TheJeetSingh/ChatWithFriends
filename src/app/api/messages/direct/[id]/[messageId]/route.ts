@@ -3,15 +3,14 @@ import { findUserById } from '@/lib/mongodb';
 import { pusherServer } from '@/lib/pusher';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
 }
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
-// Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) return null;
@@ -25,7 +24,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// DELETE a message from a direct chat
 export async function DELETE(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string; messageId: string }> | { id: string; messageId: string } }
@@ -36,15 +34,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Await params if it's a Promise
     const resolvedParams = params instanceof Promise ? await params : params;
     const { id: chatId, messageId } = resolvedParams;
     
-    // Connect to MongoDB
     const client = await import('@/lib/mongodb').then(mod => mod.default);
     const db = (await client).db();
     
-    // Verify the message exists and belongs to the user
     const message = await db.collection('messages').findOne({
       _id: new ObjectId(messageId),
       chatId: new ObjectId(chatId),
@@ -59,12 +54,10 @@ export async function DELETE(
       );
     }
 
-    // Delete the message
     await db.collection('messages').deleteOne({
       _id: new ObjectId(messageId)
     });
 
-    // Notify other clients about the deletion via Pusher
     try {
       await pusherServer.trigger(
         `direct-${chatId}`,
@@ -73,7 +66,6 @@ export async function DELETE(
       );
     } catch (pusherErr) {
       console.error('Error triggering Pusher delete event:', pusherErr);
-      // Continue even if Pusher fails
     }
 
     return NextResponse.json({ success: true });
@@ -84,4 +76,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

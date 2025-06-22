@@ -6,12 +6,10 @@ import * as jose from 'jose';
 import { pusherServer } from '@/lib/pusher';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 const secretKey = new TextEncoder().encode(SECRET);
 
-// Helper to get current user from JWT cookie
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) return null;
@@ -25,7 +23,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// Verify that the user is a member of the group
 async function verifyGroupMembership(groupId: string, userId: ObjectId) {
   const client = await clientPromise;
   const db = client.db();
@@ -36,7 +33,6 @@ async function verifyGroupMembership(groupId: string, userId: ObjectId) {
   return !!group;
 }
 
-// GET messages for a group chat
 export async function GET(
   request: NextRequest,
   context: any
@@ -52,7 +48,6 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
 
-    // Verify membership
     const isMember = await verifyGroupMembership(groupId, currentUser._id);
     if (!isMember) {
       return NextResponse.json({ error: 'Not authorized to access this group' }, { status: 403 });
@@ -75,7 +70,6 @@ export async function GET(
   }
 }
 
-// POST a message to a group chat
 export async function POST(
   request: NextRequest,
   context: any
@@ -91,7 +85,6 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid group ID' }, { status: 400 });
     }
 
-    // Verify membership
     const isMember = await verifyGroupMembership(groupId, currentUser._id);
     if (!isMember) {
       return NextResponse.json({ error: 'Not authorized to access this group' }, { status: 403 });
@@ -116,7 +109,6 @@ export async function POST(
 
     const result = await db.collection('messages').insertOne(messageDoc);
 
-    // Format message for response and broadcasting
     const messageWithUser = {
       ...messageDoc,
       _id: result.insertedId.toString(),
@@ -128,7 +120,6 @@ export async function POST(
       }
     };
 
-    // Broadcast via Pusher
     try {
       await pusherServer.trigger(
         `group-${groupId}`,
@@ -137,7 +128,6 @@ export async function POST(
       );
     } catch (pusherErr) {
       console.error('Error triggering Pusher event:', pusherErr);
-      // Continue with the request even if Pusher fails
     }
 
     return NextResponse.json(messageWithUser);
@@ -148,4 +138,4 @@ export async function POST(
       { status: 500 }
     );
   }
-} 
+}

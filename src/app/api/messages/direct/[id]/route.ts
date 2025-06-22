@@ -3,15 +3,14 @@ import { getMessagesWithUserDetails, createMessage, findUserById } from '@/lib/m
 import { pusherServer } from '@/lib/pusher';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
 }
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
-// Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) return null;
@@ -25,7 +24,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// Helper function to verify user is part of this direct chat
 async function verifyDirectChatAccess(chatId: string, userId: ObjectId) {
   try {
     const client = await import('@/lib/mongodb').then(mod => mod.default);
@@ -40,7 +38,6 @@ async function verifyDirectChatAccess(chatId: string, userId: ObjectId) {
   }
 }
 
-// GET messages for a direct chat
 export async function GET(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
@@ -53,13 +50,11 @@ export async function GET(
 
     const { id: chatId } = await params;
     
-    // Verify user has access to this chat
     const hasAccess = await verifyDirectChatAccess(chatId, currentUser._id);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Not authorized to access this chat' }, { status: 403 });
     }
 
-    // Get messages
     const messages = await getMessagesWithUserDetails(
       new ObjectId(chatId), 
       'direct',
@@ -76,7 +71,6 @@ export async function GET(
   }
 }
 
-// POST a new message to a direct chat
 export async function POST(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
@@ -89,19 +83,16 @@ export async function POST(
 
     const { id: chatId } = await params;
     
-    // Verify user has access to this chat
     const hasAccess = await verifyDirectChatAccess(chatId, currentUser._id);
     if (!hasAccess) {
       return NextResponse.json({ error: 'Not authorized to access this chat' }, { status: 403 });
     }
 
-    // Get message content
     const { content } = await request.json();
     if (!content) {
       return NextResponse.json({ error: 'Message content is required' }, { status: 400 });
     }
 
-    // Create the message
     const message = await createMessage({
       content,
       senderId: currentUser._id,
@@ -109,7 +100,6 @@ export async function POST(
       chatType: 'direct'
     });
 
-    // Transform for response (with user data)
     const messageWithUser = {
       _id: message._id.toString(),
       content: message.content,
@@ -122,7 +112,6 @@ export async function POST(
       }
     };
 
-    // Trigger pusher event (non-blocking)
     try {
     await pusherServer.trigger(
       `direct-${chatId}`,
@@ -131,7 +120,6 @@ export async function POST(
     );
     } catch (pusherErr) {
       console.error('Error triggering Pusher event:', pusherErr);
-      // Do not fail the request if Pusher fails in development
     }
 
     return NextResponse.json(messageWithUser);
@@ -142,4 +130,4 @@ export async function POST(
       { status: 500 }
     );
   }
-} 
+}
