@@ -39,34 +39,39 @@ export default function Sidebar({ currentUser, selectedChatId }: SidebarProps) {
         credentials: 'include',
       });
       // If unauthorized, skip (user will be redirected by higher-level logic)
-      let directChats: any[] = [];
+      type RawChat = Omit<Chat, 'updatedAt'> & {
+        updatedAt?: string;
+        lastMessageTime?: string;
+      };
+
+      let directChats: RawChat[] = [];
       if (directRes.ok) {
-        directChats = await directRes.json();
+        directChats = (await directRes.json()) as RawChat[];
       }
 
       // Fetch group chats
       const groupRes = await fetch('/api/chats/groups', {
         credentials: 'include',
       });
-      let groupChats: any[] = [];
+      let groupChats: RawChat[] = [];
       if (groupRes.ok) {
-        groupChats = await groupRes.json();
+        groupChats = (await groupRes.json()) as RawChat[];
       }
 
-      const combined = [...directChats, ...groupChats];
+      const combined: RawChat[] = [...directChats, ...groupChats];
 
-      // Sort by updatedAt / lastMessageTime if available
-      combined.sort((a, b) => {
-        const timeA = new Date((a.updatedAt || a.lastMessageTime || 0) as any).getTime();
-        const timeB = new Date((b.updatedAt || b.lastMessageTime || 0) as any).getTime();
-        return timeB - timeA;
-      });
-
-      // Normalize and convert dates
-      const normalized = combined.map((chat: any) => ({
+      // Convert date strings to Date objects and ensure updatedAt exists
+      const normalized: Chat[] = combined.map((chat) => ({
         ...chat,
-        updatedAt: chat.updatedAt ? new Date(chat.updatedAt) : (chat.lastMessageTime ? new Date(chat.lastMessageTime) : new Date(0)),
+        updatedAt: chat.updatedAt
+          ? new Date(chat.updatedAt)
+          : chat.lastMessageTime
+          ? new Date(chat.lastMessageTime)
+          : new Date(0),
       }));
+
+      // Sort chats by most recent activity
+      normalized.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
       setChats(normalized);
     } catch (error) {

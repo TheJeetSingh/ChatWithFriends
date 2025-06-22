@@ -32,8 +32,10 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       setSearchResults(data);
-    } catch (error) {
-      console.error('Error searching users:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error searching users:', err);
+      setError('Failed to search users. Please try again.');
     } finally {
       setIsSearching(false);
     }
@@ -54,8 +56,9 @@ export default function DashboardPage() {
       
       const chat = await response.json();
       router.push(`/chat/${chat.type}/${chat.id}`);
-    } catch (error) {
-      console.error('Error starting chat:', error);
+    } catch (err) {
+      console.error('Error starting chat:', err);
+      setError('Unable to start the chat. Please try again later.');
     }
   };
 
