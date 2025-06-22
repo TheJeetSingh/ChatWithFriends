@@ -4,17 +4,14 @@ import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
 }
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
-// Create a TextEncoder for the secret
 const secretKey = new TextEncoder().encode(SECRET);
 
-// Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) {
@@ -44,7 +41,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// GET - List all group chats for the current user
 export async function GET(request: NextRequest) {
   console.log('[groups] GET request received');
   try {
@@ -59,7 +55,6 @@ export async function GET(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db();
     
-    // Find all groups where the user is a member
     console.log('[groups] Finding groups for user:', currentUser._id.toString());
     const groups = await db.collection('groupChats').find({
       members: currentUser._id
@@ -67,7 +62,6 @@ export async function GET(request: NextRequest) {
     
     console.log('[groups] Found groups:', groups.length);
     
-    // Transform for response
     const transformedGroups = groups.map(group => ({
       id: group._id.toString(),
       name: group.name,
@@ -88,7 +82,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new group chat
 export async function POST(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser(request);
@@ -107,7 +100,6 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
     const db = client.db();
     
-    // Create new group with current user as first member
     const result = await db.collection('groupChats').insertOne({
       name,
       members: [currentUser._id],
@@ -129,4 +121,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

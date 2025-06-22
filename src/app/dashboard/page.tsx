@@ -15,19 +15,47 @@ type SearchUser = {
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
-  const [searchEmail, setSearchEmail] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    const handler = setTimeout(() => {
+      const queryKey = searchTerm.includes('@') ? 'email' : 'name';
+      fetch(`/api/users/search?${queryKey}=${encodeURIComponent(searchTerm)}`, {
+        credentials: 'include',
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setSearchResults(data);
+          setError(null);
+        })
+        .catch((err) => {
+          console.error('Error searching users:', err);
+          setError('Failed to search users. Please try again.');
+        })
+        .finally(() => setIsSearching(false));
+    }, 400);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchEmail) return;
+    if (!searchTerm) return;
     
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/users/search?email=${encodeURIComponent(searchEmail)}`, {
+      const queryKey = searchTerm.includes('@') ? 'email' : 'name';
+      const res = await fetch(`/api/users/search?${queryKey}=${encodeURIComponent(searchTerm)}`, {
         credentials: 'include',
       });
       const data = await res.json();
@@ -62,7 +90,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!user && !isLoading) {
       router.push('/login');
@@ -83,17 +110,14 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar with chats */}
       <Sidebar 
         currentUser={{ id: user.id, name: user.name }}
       />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
         <DashboardHeader 
-          searchValue={searchEmail}
-          onSearchChange={setSearchEmail}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
           onSearchSubmit={() => {
             handleSearch({ preventDefault: () => {} } as unknown as React.FormEvent);
           }}
@@ -106,19 +130,19 @@ export default function DashboardPage() {
             <FiUserPlus className="mr-2" />
             Start a New Conversation
           </h2>
-          <form onSubmit={handleSearch} className="mb-6 max-w-xl">
+          <form onSubmit={handleSearch} className="mb-8 w-full max-w-2xl">
             <div className="flex gap-2">
               <input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                placeholder="Search users by email"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search users by email or name"
+                className="flex-1 px-5 py-4 border border-blue-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-600 text-base shadow-sm bg-white placeholder-gray-500"
               />
               <button 
                 type="submit"
                 disabled={isSearching}
-                className="bg-blue-600 text-white px-6 rounded-full hover:bg-blue-700 flex items-center justify-center"
+                className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors text-white px-8 py-3 rounded-full text-base font-medium shadow-md"
               >
                 {isSearching ? 'Searching...' : 'Search'}
               </button>
@@ -126,7 +150,7 @@ export default function DashboardPage() {
           </form>
 
           {searchResults.length > 0 && (
-            <div className="bg-white shadow rounded-lg divide-y max-w-xl">
+            <div className="bg-white shadow-lg rounded-2xl divide-y border border-gray-200 max-w-2xl">
               {searchResults.map(result => (
                 <div key={result.id} className="flex justify-between items-center p-4">
                   <div>

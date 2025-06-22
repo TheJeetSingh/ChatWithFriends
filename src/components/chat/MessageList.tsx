@@ -15,17 +15,16 @@ type MessageType = {
 type MessageListProps = {
   messages: MessageType[];
   currentUserId: string | null;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
 };
 
-export default function MessageList({ messages, currentUserId }: MessageListProps) {
+export default function MessageList({ messages, currentUserId, onDeleteMessage }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Group messages by date
   const groupedMessages = messages.reduce((groups: Record<string, MessageType[]>, message) => {
     const date = format(new Date(message.createdAt), 'yyyy-MM-dd');
     if (!groups[date]) {
@@ -35,7 +34,16 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
     return groups;
   }, {});
 
-  // If there are no messages, show a placeholder
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!onDeleteMessage) return;
+    
+    try {
+      await onDeleteMessage(messageId);
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+    }
+  };
+
   if (messages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-8">
@@ -72,6 +80,7 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
             return (
               <Message
                 key={message._id}
+                messageId={message._id}
                 content={message.content}
                 sender={{
                   name: message.user.name || 'Anonymous',
@@ -81,6 +90,7 @@ export default function MessageList({ messages, currentUserId }: MessageListProp
                 showAvatar={isLastInGroup}
                 showName={isFirstInGroup}
                 showTimestamp={isLastInGroup}
+                onDeleteMessage={handleDeleteMessage}
               />
             );
           })}

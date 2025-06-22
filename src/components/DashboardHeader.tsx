@@ -22,9 +22,8 @@ export default function DashboardHeader({
   };
 
   return (
-    <header className="flex items-center h-16 px-4 border-b border-gray-200 bg-white">
-      {/* Search Bar */}
-      <form onSubmit={handleSubmit} className="w-full max-w-md">
+    <header className="flex items-center h-20 px-6 border-b border-gray-200 bg-white shadow-sm">
+      <form onSubmit={handleSubmit} className="w-full max-w-lg">
         <div className="relative">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -32,12 +31,11 @@ export default function DashboardHeader({
             placeholder="Search chat"
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-gray-100 pl-10 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            className="w-full bg-gray-100 pl-10 pr-4 py-3 rounded-full text-base focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white shadow-inner placeholder-gray-500"
           />
         </div>
       </form>
 
-      {/* User Info & Actions */}
       <div className="ml-auto flex items-center space-x-4">
         <span className="text-sm text-gray-700">{userName}</span>
         <button

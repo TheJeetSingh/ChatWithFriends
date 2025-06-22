@@ -33,14 +33,29 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pusherChannel = useRef<Channel | null>(null);
   
-  // Channel name will be different based on chat type and ID
-  const channelName = chatId && chatType ? `${chatType}-${chatId}` : 'chat';
+  const channelName = chatId && chatType ? `${chatType === 'direct' ? 'direct' : 'group'}-${chatId}` : 'chat';
 
-  // Fetch messages function that can be called multiple times
+  useEffect(() => {
+    // Check Pusher connection state and reconnect if needed
+    if (pusherClient.connection.state !== 'connected') {
+      console.log('Ensuring Pusher connection is established');
+      pusherClient.connect();
+    }
+    
+    return () => {
+      // Clean up any existing channel subscriptions when component unmounts
+      if (pusherChannel.current) {
+        pusherChannel.current.unbind_all();
+        if (channelName) {
+          pusherClient.unsubscribe(channelName);
+        }
+      }
+    };
+  }, [channelName]);
+
   const fetchMessages = useCallback(async () => {
     try {
       if (!chatId || !chatType) {
-        // Global chat fallback
         const response = await fetch('/api/messages', {
           credentials: 'include',
         });
@@ -53,7 +68,6 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         
         setMessages(formattedMessages);
       } else {
-        // Specific chat
         const response = await fetch(`/api/messages/${chatType}/${chatId}`, {
           credentials: 'include',
         });
@@ -71,31 +85,25 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
     }
   }, [chatId, chatType]);
 
-  // Initial message load
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages, chatId, chatType]);
 
-  // Handle new message from Pusher
   const handleNewMessage = useCallback((data: Message) => {
     console.log('Received message via Pusher:', data);
     
     setMessages((prevMessages) => {
-      // Convert incoming date string to Date object
       const newMessage = {
         ...data,
         createdAt: new Date(data.createdAt)
       };
       
-      // Check if message already exists by _id
       const messageExists = prevMessages.some(msg => msg._id === data._id);
       if (messageExists) {
         return prevMessages;
       }
       
-      // Replace temp message if it exists
       const updatedMessages = prevMessages.filter(msg => {
-        // Keep all messages that aren't temporary or don't match the new message
         return !(msg._id.startsWith('temp-') && 
                 msg.content === data.content && 
                 msg.user.id === data.user.id);
@@ -105,18 +113,35 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
     });
   }, []);
 
-  // Subscribe to Pusher channel for real-time updates
+  const handleDeletedMessage = useCallback((data: { messageId: string }) => {
+    console.log('Message deleted via Pusher:', data);
+    setMessages(prevMessages => 
+      prevMessages.filter(msg => msg._id !== data.messageId)
+    );
+  }, []);
+
   useEffect(() => {
     if (!channelName) return;
 
     console.log(`Subscribing to channel: ${channelName}`);
     
+    // Unsubscribe from any existing channel first
+    if (pusherChannel.current) {
+      pusherChannel.current.unbind_all();
+      pusherClient.unsubscribe(channelName);
+    }
+
+    // Check if Pusher is connected, if not, connect
+    if (pusherClient.connection.state !== 'connected') {
+      pusherClient.connect();
+    }
+
     // Subscribe to the channel
     const channel = pusherClient.subscribe(channelName);
     pusherChannel.current = channel;
 
-    // Bind to events
     channel.bind('new-message', handleNewMessage);
+    channel.bind('delete-message', handleDeletedMessage);
     
     channel.bind('pusher:subscription_succeeded', () => {
       console.log(`Successfully subscribed to ${channelName}`);
@@ -124,15 +149,24 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
 
     channel.bind('pusher:subscription_error', (error: Error) => {
       console.error(`Error subscribing to ${channelName}:`, error);
+      // Try to reconnect after a delay
+      setTimeout(() => {
+        if (pusherClient.connection.state === 'connected') {
+          console.log(`Attempting to resubscribe to ${channelName}`);
+          pusherClient.subscribe(channelName);
+        } else {
+          console.log('Reconnecting Pusher before resubscribing');
+          pusherClient.connect();
+        }
+      }, 2000);
     });
 
-    // Clean up subscription when component unmounts or channel changes
     return () => {
       console.log(`Unsubscribing from channel: ${channelName}`);
       channel.unbind_all();
       pusherClient.unsubscribe(channelName);
     };
-  }, [channelName, handleNewMessage]);
+  }, [channelName, handleNewMessage, handleDeletedMessage]);
 
   const handleSendMessage = async (content: string) => {
     if (!currentUser || !content.trim()) return;
@@ -141,7 +175,6 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
     setIsLoading(true);
     
     try {
-      // Create a temporary message
       const tempMessage: Message = {
         _id: tempId,
         content: content.trim(),
@@ -153,10 +186,8 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         }
       };
       
-      // Add temp message to UI
       setMessages(prev => [...prev, tempMessage]);
       
-      // Send to server
       const endpoint = chatId && chatType 
         ? `/api/messages/${chatType}/${chatId}`
         : '/api/messages';
@@ -174,10 +205,8 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         throw new Error(`Server returned ${response.status}`);
       }
 
-      // Server will broadcast via Pusher, which will update UI
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Remove temp message on error
       setMessages(prev => prev.filter(msg => msg._id !== tempId));
       alert('Failed to send message. Please try again.');
     } finally {
@@ -185,11 +214,38 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!currentUser || !chatId || !chatType) return;
+    
+    try {
+      const endpoint = `/api/messages/${chatType}/${chatId}/${messageId}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Server returned ${response.status}`);
+      }
+      
+      // Optimistically remove from UI
+      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+      
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      alert(`Failed to delete message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   if (!currentUser) return null;
 
   return (
     <div className="flex h-screen bg-white">
-      {/* Sidebar */}
       <div 
         className={`${
           isSidebarOpen ? 'w-64' : 'w-0'
@@ -201,20 +257,18 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
         />
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Chat Header */}
         <ChatHeader 
           chatType={chatType}
           chatId={chatId}
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        {/* Messages Area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
           <MessageList 
             messages={messages} 
             currentUserId={currentUser.id} 
+            onDeleteMessage={handleDeleteMessage}
           />
           <MessageInput 
             onSendMessage={handleSendMessage} 

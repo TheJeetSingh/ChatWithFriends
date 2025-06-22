@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createUser, findUserByEmail } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
@@ -11,10 +10,8 @@ const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the request body
     const { name, email, password } = await request.json();
 
-    // Validate inputs
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Name, email, and password are required' },
@@ -29,7 +26,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
     const existingUser = await findUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
@@ -38,17 +34,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new user
     const user = await createUser({ name, email, password });
 
-    // Create JWT token
     const token = jwt.sign(
       { id: user._id.toString(), email: user.email },
       SECRET,
       { expiresIn: '7d' }
     );
 
-    // Set response with user data
     const response = NextResponse.json({
       user: {
         id: user._id,
@@ -57,7 +50,6 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Cookie settings based on environment
     const isProduction = process.env.NODE_ENV === 'production';
     
     response.cookies.set({
@@ -66,9 +58,8 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
-      // leave domain undefined → host-only cookie works for localhost and Vercel URLs
     });
     
     return response;
@@ -79,4 +70,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

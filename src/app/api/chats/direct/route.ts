@@ -3,14 +3,12 @@ import { getUserDirectChats, findOrCreateDirectChat, findUserById } from '@/lib/
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
 }
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
-// Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) {
@@ -22,7 +20,6 @@ async function getCurrentUser(request: NextRequest) {
     const decoded = jwt.verify(token, SECRET) as { id: string; email: string };
     console.log('Decoded token:', decoded);
     
-    // Ensure the id is a valid ObjectId
     if (!ObjectId.isValid(decoded.id)) {
       console.error('Invalid ObjectId in token:', decoded.id);
       return null;
@@ -41,7 +38,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// GET - List all direct chats for the current user
 export async function GET(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser(request);
@@ -51,15 +47,12 @@ export async function GET(request: NextRequest) {
 
     const chats = await getUserDirectChats(currentUser._id);
     
-    // Populate chat data with other user info for each chat
     const populatedChats = await Promise.all(chats.map(async (chat) => {
-      // Find the other user in the conversation
       const otherUserIds = chat.participants.filter(
         (id: ObjectId) => id.toString() !== currentUser._id.toString()
       );
       
       if (!otherUserIds.length) {
-        // Fallback for self-chat or invalid chat
         return {
           id: chat._id.toString(),
           name: 'Unknown User',
@@ -73,7 +66,6 @@ export async function GET(request: NextRequest) {
         id: chat._id.toString(),
         name: otherUser ? otherUser.name : 'Unknown User',
         type: 'direct',
-        // Additional chat metadata could be added here
       };
     }));
 
@@ -87,7 +79,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new direct chat with another user
 export async function POST(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser(request);
@@ -103,7 +94,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if the target user exists
     const targetUser = await findUserById(userId);
     if (!targetUser) {
       return NextResponse.json(
@@ -112,7 +102,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create or get existing chat
     const chat = await findOrCreateDirectChat(currentUser._id, targetUser._id);
 
     return NextResponse.json({
@@ -127,4 +116,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

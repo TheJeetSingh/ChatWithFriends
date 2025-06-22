@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateUser } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
@@ -11,10 +10,8 @@ const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
     const { email, password } = await request.json();
     
-    // Check if email and password are provided
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' }, 
@@ -22,7 +19,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate user
     const user = await validateUser(email, password);
     if (!user) {
       return NextResponse.json(
@@ -31,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create JWT token
     const token = jwt.sign(
       { id: user._id.toString(), email: user.email },
       SECRET,
@@ -41,7 +36,6 @@ export async function POST(request: NextRequest) {
     console.log('[login] Created token for user:', user._id.toString());
     console.log('[login] Token preview:', token.substring(0, 10) + '...');
     
-    // Set cookie
     const response = NextResponse.json({
       user: {
         id: user._id,
@@ -50,7 +44,6 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Cookie settings based on environment
     const isProduction = process.env.NODE_ENV === 'production';
     console.log('[login] Environment:', process.env.NODE_ENV);
     console.log('[login] Is production:', isProduction);
@@ -61,7 +54,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
     
@@ -81,4 +74,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

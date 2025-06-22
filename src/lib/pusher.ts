@@ -23,7 +23,11 @@ if (!pusherKey || !pusherCluster) {
 
 export const pusherClient = new PusherClient(pusherKey, {
   cluster: pusherCluster,
-    forceTLS: true,
+  forceTLS: true,
+  enabledTransports: ['ws', 'wss'],
+  disabledTransports: ['xhr_streaming', 'xhr_polling'],
+  activityTimeout: 30000,
+  pongTimeout: 15000
 });
 
 interface PusherError {

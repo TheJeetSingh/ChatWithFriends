@@ -1,20 +1,16 @@
 import { MongoClient, ObjectId, Document, Filter, UpdateFilter } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
-// Use the connection string from environment variable
 if (!process.env.MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
 const uri = process.env.MONGODB_URI;
 
-// MongoDB Client
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
   const globalWithMongo = global as typeof global & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
@@ -25,14 +21,12 @@ if (process.env.NODE_ENV === 'development') {
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
-  // In production mode, it's best to not use a global variable.
   client = new MongoClient(uri);
   clientPromise = client.connect();
 }
 
 export default clientPromise;
 
-// MongoDB Schema Types
 export type User = {
   _id?: ObjectId;
   email: string;
@@ -71,25 +65,21 @@ export type Message = {
   createdAt: Date;
 }
 
-// Helper functions for common database operations
 export async function getCollection(collectionName: string) {
   const client = await clientPromise;
   const db = client.db();
   return db.collection(collectionName);
 }
 
-// User operations
 export async function findUserById(userId: string | ObjectId) {
   try {
     const collection = await getCollection('users');
     
-    // Validate ObjectId
     if (!ObjectId.isValid(userId)) {
       console.error('Invalid ObjectId format:', userId);
       return null;
     }
     
-    // Convert to ObjectId if string
     const objectId = typeof userId === 'string' ? new ObjectId(userId) : userId;
     
     const user = await collection.findOne({ _id: objectId });
@@ -134,13 +124,11 @@ export async function validateUser(email: string, password: string) {
   return user;
 }
 
-// Direct chat operations
 export async function findOrCreateDirectChat(user1Id: string | ObjectId, user2Id: string | ObjectId) {
   const collection = await getCollection('directChats');
   const user1ObjectId = typeof user1Id === 'string' ? new ObjectId(user1Id) : user1Id;
   const user2ObjectId = typeof user2Id === 'string' ? new ObjectId(user2Id) : user2Id;
   
-  // Check if chat already exists
   const existingChat = await collection.findOne({
     participants: { 
       $all: [user1ObjectId, user2ObjectId] 
@@ -151,7 +139,6 @@ export async function findOrCreateDirectChat(user1Id: string | ObjectId, user2Id
     return existingChat;
   }
   
-  // Create new chat
   const newChat: DirectChat = {
     participants: [user1ObjectId, user2ObjectId],
     createdAt: new Date(),
@@ -171,7 +158,6 @@ export async function getUserDirectChats(userId: string | ObjectId) {
   }).toArray();
 }
 
-// Group operations
 export async function createGroup(groupData: {
   name: string;
   description?: string;
@@ -223,7 +209,6 @@ export async function getGroupMembers(groupId: string | ObjectId) {
   }).toArray();
 }
 
-// Message operations
 export async function createMessage(messageData: {
   content: string;
   senderId: string | ObjectId;
@@ -280,15 +265,12 @@ export async function getMessagesWithUserDetails(chatId: string | ObjectId, chat
   .limit(limit)
   .toArray();
   
-  // Get unique sender IDs
   const senderIds = [...new Set(messages.map(msg => msg.senderId))];
   
-  // Fetch all users in one query
   const users = await usersCollection.find({
     _id: { $in: senderIds }
   }).toArray();
   
-  // Create a map for quick lookup
   const userMap = new Map();
   users.forEach(user => {
     userMap.set(user._id.toString(), {
@@ -297,7 +279,6 @@ export async function getMessagesWithUserDetails(chatId: string | ObjectId, chat
     });
   });
   
-  // Attach user info to messages
   return messages.map(msg => ({
     ...msg,
     _id: msg._id.toString(),
@@ -330,4 +311,4 @@ export async function updateDocument(collectionName: string, filter: Filter<Docu
 export async function deleteDocument(collectionName: string, filter: Filter<Document>) {
   const collection = await getCollection(collectionName);
   return await collection.deleteOne(filter);
-} 
+}

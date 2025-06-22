@@ -3,19 +3,15 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Get JWT Secret from environment variable with fallback for development
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   console.error('WARNING: JWT_SECRET is not defined in environment variables');
 }
 const SECRET = JWT_SECRET || 'development_fallback_not_for_production';
 
-// Create a TextEncoder for the secret
 const secretKey = new TextEncoder().encode(SECRET);
 
-// Helper function to get current user from JWT
 async function getCurrentUser(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   if (!token) return null;
@@ -42,7 +38,6 @@ async function getCurrentUser(request: NextRequest) {
   }
 }
 
-// GET - Get details of a specific group chat
 export async function GET(
   request: NextRequest,
   context: any
@@ -61,7 +56,6 @@ export async function GET(
     const client = await clientPromise;
     const db = client.db();
     
-    // Get the group chat and verify user is a member
     const group = await db.collection('groupChats').findOne({
       _id: new ObjectId(groupId),
       members: { $in: [currentUser._id] }
@@ -71,7 +65,6 @@ export async function GET(
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    // Get member details
     const members = await db.collection('users')
       .find({ _id: { $in: group.members } })
       .project({ name: 1, email: 1 })
@@ -99,7 +92,6 @@ export async function GET(
   }
 }
 
-// PATCH - Update group chat (e.g., add/remove members, change name)
 export async function PATCH(
   request: NextRequest,
   context: any
@@ -120,7 +112,6 @@ export async function PATCH(
     const client = await clientPromise;
     const db = client.db();
     
-    // Get the group and verify user is the creator
     const group = await db.collection('groupChats').findOne({
       _id: new ObjectId(groupId),
       createdBy: currentUser._id
@@ -172,14 +163,13 @@ export async function PATCH(
       }
     }
 
-    if (Object.keys(updates).length > 1) { // More than just updatedAt
+    if (Object.keys(updates).length > 1) {
       await db.collection('groupChats').updateOne(
         { _id: new ObjectId(groupId) },
         { $set: updates }
       );
     }
 
-    // Get updated group details
     const updatedGroup = await db.collection('groupChats').findOne({
       _id: new ObjectId(groupId)
     });
@@ -205,4 +195,4 @@ export async function PATCH(
       { status: 500 }
     );
   }
-} 
+}

@@ -1,4 +1,4 @@
-import { FiMenu, FiVideo, FiMoreVertical } from 'react-icons/fi';
+import { FiMenu } from 'react-icons/fi';
 import { useCallback, useEffect, useState } from 'react';
 
 type ChatType = 'direct' | 'group';
@@ -19,7 +19,6 @@ export default function ChatHeader({ chatType, chatId, onMenuClick }: ChatHeader
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
   const [isOnline, setIsOnline] = useState(false);
 
-  // Fetch chat details
   const fetchChatDetails = useCallback(async () => {
     if (!chatId || !chatType) {
       setChatDetails({ name: 'Welcome to Chat' });
@@ -82,15 +81,6 @@ export default function ChatHeader({ chatType, chatId, onMenuClick }: ChatHeader
             {chatDetails.memberCount} members
           </p>
         )}
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <FiVideo className="w-5 h-5 text-gray-600" />
-        </button>
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <FiMoreVertical className="w-5 h-5 text-gray-600" />
-        </button>
       </div>
     </div>
   );

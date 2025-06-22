@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import ChatContainer from '@/components/chat/ChatContainer';
 import Link from 'next/link';
 
-// Types for chat data
 type ChatType = 'direct' | 'group';
 
 type ChatDetails = {
@@ -30,13 +29,11 @@ export default function ChatPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
-  // Extract chat type and ID from URL params
   const chatType = params.type as ChatType;
   const chatId = params.id as string;
 
   useEffect(() => {
     if (!user && !isLoading) {
-      // Redirect to login if not authenticated
       router.push('/login');
       return;
     }
@@ -48,7 +45,6 @@ export default function ChatPage() {
       setError(null);
       
       try {
-        // Use plural form for group chats
         const endpoint = chatType === 'group' 
           ? `/api/chats/groups/${chatId}`
           : `/api/chats/${chatType}/${chatId}`;
@@ -74,7 +70,6 @@ export default function ChatPage() {
     fetchChatDetails();
   }, [user, isLoading, chatId, chatType, router]);
 
-  // Function to search users by email (reuse API)
   const searchUsers = async () => {
     if (!inviteEmail.trim()) return;
     setIsInviting(true);
@@ -91,7 +86,6 @@ export default function ChatPage() {
     }
   };
 
-  // Function to add member
   const addMember = async (userId: string) => {
     try {
       const res = await fetch(`/api/chats/groups/${chatId}`, {
@@ -104,11 +98,9 @@ export default function ChatPage() {
         const err = await res.json();
         throw new Error(err.error || 'Failed to add member');
       }
-      // Success – refresh chat details
       setIsAdding(false);
       setInviteEmail('');
       setInviteResults([]);
-      // Optionally refetch chat details to update memberCount
       setChatDetails(prev => prev ? { ...prev, memberCount: (prev.memberCount || 0) + 1 } : prev);
     } catch (e) {
       setInviteError(e instanceof Error ? e.message : 'Failed');
@@ -227,4 +219,4 @@ export default function ChatPage() {
       />
     </div>
   );
-} 
+}
