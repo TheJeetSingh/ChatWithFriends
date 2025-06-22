@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { findUserById } from '@/lib/mongodb';
 import * as jose from 'jose';
+import { pusherServer } from '@/lib/pusher';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Get JWT Secret from environment variable with fallback for development
@@ -115,14 +116,31 @@ export async function POST(
 
     const result = await db.collection('messages').insertOne(messageDoc);
 
-    // TODO: optionally broadcast via pusher
-
-    return NextResponse.json({
+    // Format message for response and broadcasting
+    const messageWithUser = {
       ...messageDoc,
       _id: result.insertedId.toString(),
       senderId: currentUser._id.toString(),
-      chatId: groupId
-    });
+      chatId: groupId,
+      user: {
+        id: currentUser._id.toString(),
+        name: currentUser.name
+      }
+    };
+
+    // Broadcast via Pusher
+    try {
+      await pusherServer.trigger(
+        `group-${groupId}`,
+        'new-message',
+        messageWithUser
+      );
+    } catch (pusherErr) {
+      console.error('Error triggering Pusher event:', pusherErr);
+      // Continue with the request even if Pusher fails
+    }
+
+    return NextResponse.json(messageWithUser);
   } catch (error) {
     console.error('Error posting group message:', error);
     return NextResponse.json(

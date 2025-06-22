@@ -87,20 +87,19 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
       
       // Check if message already exists by _id
       const messageExists = prevMessages.some(msg => msg._id === data._id);
-      
       if (messageExists) {
         return prevMessages;
       }
       
-      // Replace temp message or add new message
-      return prevMessages.map(msg => {
-        if (msg._id.startsWith('temp-') && 
-            msg.content === data.content && 
-            msg.user.id === data.user.id) {
-          return newMessage;
-        }
-        return msg;
-      }).concat(messageExists ? [] : [newMessage]);
+      // Replace temp message if it exists
+      const updatedMessages = prevMessages.filter(msg => {
+        // Keep all messages that aren't temporary or don't match the new message
+        return !(msg._id.startsWith('temp-') && 
+                msg.content === data.content && 
+                msg.user.id === data.user.id);
+      });
+      
+      return [...updatedMessages, newMessage];
     });
   }, []);
 
