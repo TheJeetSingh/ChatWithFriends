@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { pusherClient } from '@/lib/pusher';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import NavBar from './NavBar';
+import Sidebar from './Sidebar';
+import ChatHeader from '@/components/chat/ChatHeader';
 import { Channel } from 'pusher-js';
 
 type ChatType = 'direct' | 'group';
@@ -29,6 +30,7 @@ type ChatContainerProps = {
 export default function ChatContainer({ currentUser, chatId, chatType }: ChatContainerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pusherChannel = useRef<Channel | null>(null);
   
   // Channel name will be different based on chat type and ID
@@ -186,18 +188,39 @@ export default function ChatContainer({ currentUser, chatId, chatType }: ChatCon
   if (!currentUser) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {!chatId && <NavBar username={currentUser.name} />}
+    <div className="flex h-screen bg-white">
+      {/* Sidebar */}
+      <div 
+        className={`${
+          isSidebarOpen ? 'w-64' : 'w-0'
+        } flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden border-r border-gray-200`}
+      >
+        <Sidebar 
+          currentUser={currentUser}
+          selectedChatId={chatId}
+        />
+      </div>
 
-      <div className="flex-grow flex flex-col h-0">
-        <MessageList 
-          messages={messages} 
-          currentUserId={currentUser.id} 
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Chat Header */}
+        <ChatHeader 
+          chatType={chatType}
+          chatId={chatId}
+          onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
         />
-        <MessageInput 
-          onSendMessage={handleSendMessage} 
-          isLoading={isLoading} 
-        />
+
+        {/* Messages Area */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+          <MessageList 
+            messages={messages} 
+            currentUserId={currentUser.id} 
+          />
+          <MessageInput 
+            onSendMessage={handleSendMessage} 
+            isLoading={isLoading} 
+          />
+        </div>
       </div>
     </div>
   );

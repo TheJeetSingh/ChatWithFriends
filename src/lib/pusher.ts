@@ -23,7 +23,7 @@ if (!pusherKey || !pusherCluster) {
 
 export const pusherClient = new PusherClient(pusherKey, {
   cluster: pusherCluster,
-  forceTLS: true,
+    forceTLS: true,
 });
 
 interface PusherError {
