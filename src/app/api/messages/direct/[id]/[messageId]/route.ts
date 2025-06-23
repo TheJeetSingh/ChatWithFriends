@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { findUserById } from '@/lib/mongodb';
 import { pusherServer } from '@/lib/pusher';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -25,17 +25,17 @@ async function getCurrentUser(request: NextRequest) {
 }
 
 export async function DELETE(
-  request: NextRequest, 
-  { params }: { params: Promise<{ id: string; messageId: string }> | { id: string; messageId: string } }
-) {
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const { id: chatId, messageId } = resolvedParams;
+    const chatId = context?.params?.id;
+    const messageId = context?.params?.messageId;
     
     const client = await import('@/lib/mongodb').then(mod => mod.default);
     const db = (await client).db();

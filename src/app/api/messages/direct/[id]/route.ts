@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { getMessagesWithUserDetails, createMessage, findUserById } from '@/lib/mongodb';
 import { pusherServer } from '@/lib/pusher';
 import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -39,16 +39,16 @@ async function verifyDirectChatAccess(chatId: string, userId: ObjectId) {
 }
 
 export async function GET(
-  request: NextRequest, 
-  { params }: { params: Promise<{ id: string }> }
-) {
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: chatId } = await params;
+    const chatId = context?.params?.id;
     
     const hasAccess = await verifyDirectChatAccess(chatId, currentUser._id);
     if (!hasAccess) {
@@ -72,16 +72,16 @@ export async function GET(
 }
 
 export async function POST(
-  request: NextRequest, 
-  { params }: { params: Promise<{ id: string }> }
-) {
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: chatId } = await params;
+    const chatId = context?.params?.id;
     
     const hasAccess = await verifyDirectChatAccess(chatId, currentUser._id);
     if (!hasAccess) {

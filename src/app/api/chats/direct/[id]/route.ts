@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { findUserById } from '@/lib/mongodb';
 import jwt from 'jsonwebtoken';
@@ -27,15 +28,15 @@ async function getCurrentUser(request: NextRequest) {
 // GET - Get details of a specific direct chat
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  context: any
+): Promise<NextResponse> {
   try {
     const currentUser = await getCurrentUser(request);
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: chatId } = await params;
+    const chatId = context?.params?.id;
 
     // Get the direct chat
     const client = await import('@/lib/mongodb').then(mod => mod.default);
